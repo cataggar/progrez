@@ -6,6 +6,10 @@
 
 Unified progress indication library for CLI/TUI applications.
 
+This compatibility branch requires Zig 0.17.0. Validate with
+`zig build test -j2` and `zig build -j2`; the pure core, C FFI and headers
+retain the pinned consumer behavior from `7d70ce8`.
+
 Provides polished, professional progress bars that take advantage of modern
 terminal features (truecolor, Unicode block elements, braille characters).
 Decouples data reporting from display rendering: callers provide data points

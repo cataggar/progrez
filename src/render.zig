@@ -611,7 +611,7 @@ fn writeColoredPartialBlock(buf: []u8, start: usize, block: []const u8, cell_idx
     // Set both FG (38) and BG (48) in one escape
     var esc_buf: [64]u8 = undefined;
     const esc = std.fmt.bufPrint(&esc_buf, "\x1b[38;2;{d};{d};{d};48;2;{d};{d};{d}m", .{
-        c.r, c.g, c.b,
+        c.r,        c.g,        c.b,
         empty_bg_r, empty_bg_g, empty_bg_b,
     }) catch "";
 
