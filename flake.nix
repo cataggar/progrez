@@ -17,7 +17,11 @@
         zig = zig-overlay.packages.${system}."0.17.0";
         zigCpu = "baseline";
         zigDynamicLinker = pkgs.lib.optionalString pkgs.stdenv.isLinux
-          ''"-Ddynamic-linker=$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"'';
+          "-Ddynamic-linker=${pkgs.lib.getLib pkgs.stdenv.cc.libc}/lib/${
+            if system == "aarch64-linux"
+            then "ld-linux-aarch64.so.1"
+            else "ld-linux-x86-64.so.2"
+          }";
 
         progrez = pkgs.stdenv.mkDerivation {
           pname = "progrez";

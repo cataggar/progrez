@@ -8,10 +8,11 @@ on:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/nix-installer-action@main
-      - run: nix flake check --max-jobs 2
+      - run: nix flake check --max-jobs 2 --print-build-logs
