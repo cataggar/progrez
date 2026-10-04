@@ -5,8 +5,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(
         std.builtin.OptimizeMode,
         "optimize",
-        "Optimization mode (default: ReleaseFast)",
-    ) orelse .ReleaseFast;
+        "Optimization mode (default: fast)",
+    ) orelse .fast;
 
     // --- Static library (Zig core + C FFI) ---
     const lib_module = b.createModule(.{
@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
         // Release archives otherwise retain Zig's randomized cache path in
         // DWARF line tables, making identical Nix derivations differ by host.
-        .strip = optimize != .Debug,
+        .strip = optimize != .debug,
     });
 
     const lib = b.addLibrary(.{
@@ -93,14 +93,35 @@ pub fn build(b: *std.Build) void {
     });
     const run_unit_tests = b.addRunArtifact(unit_tests);
 
-    const test_step = b.step("test", "Run unit tests");
+    const test_step = b.step("test", "Run unit and C ABI tests");
     test_step.dependOn(&run_unit_tests.step);
 
-    // Builds (but does not run) the test binary so CI can patchelf the
-    // FHS dynamic-linker path that Zig bakes into libc-linked exes.
+    // Build and install tests without running them for cross-target and Nix CI.
     const test_compile_step = b.step("test-compile", "Compile test binary without running");
     test_compile_step.dependOn(&b.addInstallArtifact(unit_tests, .{
         .dest_dir = .{ .override = .{ .custom = "test-bins" } },
         .dest_sub_path = "unit_test",
     }).step);
+    test_compile_step.dependOn(b.getInstallStep());
+
+    for ([_]*std.Build.Step.Compile{ lib, dylib }, [_][]const u8{ "static", "shared" }) |library, linkage| {
+        const ffi_test = b.addExecutable(.{
+            .name = b.fmt("ffi-{s}", .{linkage}),
+            .root_module = b.createModule(.{
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+            }),
+        });
+        ffi_test.root_module.addCSourceFile(.{
+            .file = b.path("tests/ffi/test_ffi.c"),
+            .flags = &.{ "-std=c11", "-Wall", "-Wextra", "-Wpedantic", "-UNDEBUG" },
+        });
+        ffi_test.root_module.addIncludePath(b.path("include"));
+        ffi_test.root_module.linkLibrary(library);
+        test_step.dependOn(&b.addRunArtifact(ffi_test).step);
+        test_compile_step.dependOn(&b.addInstallArtifact(ffi_test, .{
+            .dest_dir = .{ .override = .{ .custom = "test-bins" } },
+        }).step);
+    }
 }

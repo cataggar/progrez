@@ -14,8 +14,16 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        zig = zig-overlay.packages.${system}."0.16.0";
+        zig = zig-overlay.packages.${system}."0.17.0";
         zigCpu = "baseline";
+        zigTarget = if pkgs.stdenv.isLinux then "${system}-gnu"
+          else pkgs.lib.replaceStrings [ "darwin" ] [ "macos" ] system;
+        testRunner = pkgs.lib.optionalString pkgs.stdenv.isLinux
+          "${pkgs.lib.getLib pkgs.stdenv.cc.libc}/lib/${
+            if system == "aarch64-linux"
+            then "ld-linux-aarch64.so.1"
+            else "ld-linux-x86-64.so.2"
+          } --library-path ${pkgs.lib.getLib pkgs.stdenv.cc.libc}/lib";
 
         progrez = pkgs.stdenv.mkDerivation {
           pname = "progrez";
@@ -28,7 +36,7 @@
           buildPhase = ''
             export HOME="$TMPDIR"
             export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-            zig build --prefix $out -Dcpu=${zigCpu} -Doptimize=ReleaseFast
+            zig build -j2 --prefix $out -Dtarget=${zigTarget} -Dcpu=${zigCpu} -Doptimize=fast
           '';
 
           dontInstall = true;
@@ -42,27 +50,19 @@
             version = "0.1.0";
             src = self;
 
-            nativeBuildInputs = [ zig ]
-              ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf ];
+            nativeBuildInputs = [ zig ];
             dontConfigure = true;
 
             buildPhase = ''
               export HOME="$TMPDIR"
               export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-              # Zig with link_libc bakes /lib64/ld-linux-x86-64.so.2 as the
-              # dynamic linker, which does not exist in the Nix build sandbox.
-              # Compile the test binary first, patchelf it, then run the test.
-              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-              zig build test-compile -Dcpu=${zigCpu}
-              DL="$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"
-              for d in .zig-cache zig-out; do
-                [ -d "$d" ] || continue
-                for f in $(find "$d" -type f -perm -u+x); do
-                  patchelf --set-interpreter "$DL" "$f" 2>/dev/null || true
-                done
-              done
-              ''}
-              zig build test -Dcpu=${zigCpu}
+              zig build -j2 test-compile -Dtarget=${zigTarget} -Dcpu=${zigCpu} -Doptimize=debug
+              # The FHS interpreter is absent in the Nix sandbox. Use libc's
+              # runtime loader directly, without rewriting artifacts or caches.
+              ${testRunner} zig-out/test-bins/unit_test
+              ${testRunner} zig-out/test-bins/ffi-static
+              ${testRunner} zig-out/test-bins/ffi-shared
+              bash tests/cli/test_cli.sh ${testRunner}
             '';
 
             installPhase = ''

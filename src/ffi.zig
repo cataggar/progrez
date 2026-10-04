@@ -23,7 +23,7 @@ fn progrezIo() std.Io {
     return std.Io.Threaded.global_single_threaded.io();
 }
 
-/// Write bytes to an `std.Io.File` (0.16 needs a writer + flush).
+/// Write bytes to an `std.Io.File` using a buffered writer and flush.
 fn writeAllToFile(file: std.Io.File, data: []const u8) !void {
     var buf: [4096]u8 = undefined;
     var w = file.writer(progrezIo(), &buf);
@@ -63,7 +63,7 @@ const FfiContext = struct {
     notify_mode: NotifyMode,
     notify_after_secs: u32,
     notify_method: NotifyMethod,
-    notify_callback: ?*const fn ([*:0]const u8, ?*anyopaque) void,
+    notify_callback: ?*const fn ([*:0]const u8, ?*anyopaque) callconv(.c) void,
     notify_userdata: ?*anyopaque,
 };
 
@@ -644,7 +644,7 @@ export fn progrez_set_notify_after(ctx: ?*FfiContext, seconds: u32) void {
 /// Set a notification callback. If set, the built-in notification is skipped.
 export fn progrez_set_notify_callback(
     ctx: ?*FfiContext,
-    callback: ?*const fn ([*:0]const u8, ?*anyopaque) void,
+    callback: ?*const fn ([*:0]const u8, ?*anyopaque) callconv(.c) void,
     userdata: ?*anyopaque,
 ) void {
     const c = ctx orelse return;

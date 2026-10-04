@@ -117,20 +117,42 @@ Standard terminal variables (`COLORTERM`, `TERM`, `WT_SESSION`) are also read fo
 
 ## Building
 
+Requires Zig 0.17.0. The Nix flake pins the compiler and uses Zig's `fast`
+optimization mode for release packages. The native C ABI and both Zig modules
+(`progrez` and `progrez_core`) remain available.
+
 ```bash
-# Reproducible ReleaseFast package (requires Nix with flakes)
+# Reproducible release package (requires Nix with flakes)
 ./build
 
-# Run the complete unit and CLI suite
+# Run unit, static/shared C ABI, and CLI tests (Nix or local Zig 0.17.0)
 ./test
 
 # Run the demo
 nix develop -c ./zig-out/bin/progrez-demo
+
+# Direct native build and safety-enabled tests, without Nix
+zig build -j2
+./test -Doptimize=debug
+
+# Cross-build the complete libraries and C demo without running them
+zig build -j2 -Dtarget=x86_64-windows-gnu --prefix zig-out/windows
+zig build -j2 -Dtarget=aarch64-linux-gnu --prefix zig-out/aarch64-linux
+zig build -j2 -Dtarget=aarch64-macos --prefix zig-out/aarch64-macos
 ```
 
-Nix release builds pin Zig code generation to the portable CPU baseline rather
-than the build host's native instruction set. Release static archives also omit
-DWARF build paths. On x86-64 Linux, `nix flake check` disassembles the complete
+The C ABI tests cover manual rendering, automatic render-thread shutdown,
+buffer bounds, and C notification callbacks against both library variants.
+`nix flake check` runs these tests and the CLI suite on Linux and macOS.
+Linux Nix tests invoke libc's runtime loader directly, since the sandbox has no
+FHS interpreter path; neither installed artifacts nor build caches are patched.
+With Nix installed, `./test` runs the flake checks; otherwise it accepts Zig build
+options such as `-Doptimize=debug`.
+
+Nix release builds pin Zig code generation to an explicit target ABI and the
+portable CPU baseline rather than the build host's native instruction set.
+Release static archives also omit DWARF build paths. On x86-64 Linux,
+`nix flake check` disassembles the complete
 package instruction set and rejects host-specific ISA or embedded `/build/`
 paths, keeping cache artifacts reproducible across CI machines.
 
