@@ -145,8 +145,8 @@ The C ABI tests cover manual rendering, automatic render-thread shutdown,
 buffer bounds, and C notification callbacks against both library variants.
 `nix flake check` runs these tests and the CLI suite on Linux and macOS.
 
-Nix release builds pin Zig code generation to the portable CPU baseline rather
-than the build host's native instruction set. Release static archives also omit
+Nix release builds pin Zig code generation to an explicit target ABI and the
+portable CPU baseline rather than the build host's native instruction set. Release static archives also omit
 DWARF build paths. On x86-64 Linux, `nix flake check` disassembles the complete
 package instruction set and rejects host-specific ISA or embedded `/build/`
 paths, keeping cache artifacts reproducible across CI machines.

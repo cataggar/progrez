@@ -16,6 +16,8 @@
         pkgs = nixpkgs.legacyPackages.${system};
         zig = zig-overlay.packages.${system}."0.17.0";
         zigCpu = "baseline";
+        zigTarget = if pkgs.stdenv.isLinux then "${system}-gnu"
+          else pkgs.lib.replaceStrings [ "darwin" ] [ "macos" ] system;
         zigDynamicLinker = pkgs.lib.optionalString pkgs.stdenv.isLinux
           "-Ddynamic-linker=${pkgs.lib.getLib pkgs.stdenv.cc.libc}/lib/${
             if system == "aarch64-linux"
@@ -34,7 +36,7 @@
           buildPhase = ''
             export HOME="$TMPDIR"
             export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-            zig build -j2 --prefix $out -Dcpu=${zigCpu} ${zigDynamicLinker} -Doptimize=fast
+            zig build -j2 --prefix $out -Dtarget=${zigTarget} -Dcpu=${zigCpu} ${zigDynamicLinker} -Doptimize=fast
           '';
 
           dontInstall = true;
@@ -56,7 +58,7 @@
               export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
               # The default FHS interpreter does not exist in the Nix sandbox.
               # Select the Nix interpreter at compile time, without ELF rewriting.
-              zig build -j2 test-compile -Dcpu=${zigCpu} ${zigDynamicLinker} -Doptimize=debug
+              zig build -j2 test-compile -Dtarget=${zigTarget} -Dcpu=${zigCpu} ${zigDynamicLinker} -Doptimize=debug
               zig-out/test-bins/unit_test
               zig-out/test-bins/ffi-static
               zig-out/test-bins/ffi-shared
