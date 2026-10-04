@@ -96,8 +96,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit and C ABI tests");
     test_step.dependOn(&run_unit_tests.step);
 
-    // Builds (but does not run) the test binary so CI can patchelf the
-    // FHS dynamic-linker path that Zig bakes into libc-linked exes.
+    // Build and install tests without running them for cross-target and Nix CI.
     const test_compile_step = b.step("test-compile", "Compile test binary without running");
     test_compile_step.dependOn(&b.addInstallArtifact(unit_tests, .{
         .dest_dir = .{ .override = .{ .custom = "test-bins" } },

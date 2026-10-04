@@ -16,6 +16,8 @@
         pkgs = nixpkgs.legacyPackages.${system};
         zig = zig-overlay.packages.${system}."0.17.0";
         zigCpu = "baseline";
+        zigDynamicLinker = pkgs.lib.optionalString pkgs.stdenv.isLinux
+          ''"-Ddynamic-linker=$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"'';
 
         progrez = pkgs.stdenv.mkDerivation {
           pname = "progrez";
@@ -28,7 +30,7 @@
           buildPhase = ''
             export HOME="$TMPDIR"
             export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-            zig build -j2 --prefix $out -Dcpu=${zigCpu} -Doptimize=fast
+            zig build -j2 --prefix $out -Dcpu=${zigCpu} ${zigDynamicLinker} -Doptimize=fast
           '';
 
           dontInstall = true;
@@ -42,23 +44,15 @@
             version = "0.1.0";
             src = self;
 
-            nativeBuildInputs = [ zig ]
-              ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf ];
+            nativeBuildInputs = [ zig ];
             dontConfigure = true;
 
             buildPhase = ''
               export HOME="$TMPDIR"
               export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-              zig build -j2 test-compile -Dcpu=${zigCpu} -Doptimize=debug
-              # Zig with link_libc bakes /lib64/ld-linux-x86-64.so.2 as the
-              # dynamic linker, which does not exist in the Nix build sandbox.
-              # Patch only installed executables, leaving build caches intact.
-              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-              DL="$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"
-              for f in zig-out/bin/* zig-out/test-bins/*; do
-                patchelf --set-interpreter "$DL" "$f"
-              done
-              ''}
+              # The default FHS interpreter does not exist in the Nix sandbox.
+              # Select the Nix interpreter at compile time, without ELF rewriting.
+              zig build -j2 test-compile -Dcpu=${zigCpu} ${zigDynamicLinker} -Doptimize=debug
               zig-out/test-bins/unit_test
               zig-out/test-bins/ffi-static
               zig-out/test-bins/ffi-shared
