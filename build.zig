@@ -3,10 +3,10 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.option(
-        std.builtin.OptimizeMode,
+        std.lang.Optimize,
         "optimize",
-        "Optimization mode (default: ReleaseFast)",
-    ) orelse .ReleaseFast;
+        "Optimization mode (default: fast)",
+    ) orelse .fast;
 
     // --- Static library (Zig core + C FFI) ---
     const lib_module = b.createModule(.{
