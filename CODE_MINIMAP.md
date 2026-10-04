@@ -100,7 +100,7 @@ C header. Declares opaque `progrez_ctx` type and all FFI functions including gra
 C demo program. Exercises indeterminate scan phase then determinate processing phase via the C FFI.
 
 ## tests/cli/test_cli.sh
-CLI integration tests (Bash). 3 tests: demo runs without crash, PROGRESS=false suppresses output, completion summary present.
+CLI integration tests (Bash). 3 tests: demo runs without crash, PROGRESS=false suppresses output, completion summary present. Optional command-line arguments specify an executable runner (used for the libc runtime loader in Nix Linux tests).
 
 ## tests/ffi/test_ffi.c
 C ABI integration tests linked against both static and shared libraries. Covers manual rendering, buffer bounds, render-thread shutdown, and C notification callbacks.
@@ -109,4 +109,4 @@ C ABI integration tests linked against both static and shared libraries. Covers 
 Zig 0.17 build system. Static library (`libprogrez`), dynamic library (`libprogrez_shared.dylib`/`.so`), C demo executable (`progrez-demo`), unit and C ABI test step. Default optimize: `fast`. Installs C header to `include/`. Exposes Zig modules for downstream consumers. `test-compile` installs all test binaries and the demo without executing them.
 
 ## flake.nix
-Nix flake. Pins Zig 0.17.0 and provides `packages.default` (the libraries and demo), `checks.test` (safety-enabled unit, C ABI, and CLI tests), and `devShells.default` (zig + hyperfine). Retains the baseline-CPU package reproducibility check on x86-64 Linux.
+Nix flake. Pins Zig 0.17.0 and provides `packages.default` (the libraries and demo), `checks.test` (safety-enabled unit, C ABI, and CLI tests), and `devShells.default` (zig + hyperfine). Linux tests use the libc runtime loader directly without modifying artifacts or caches. Retains the baseline-CPU package reproducibility check on x86-64 Linux.

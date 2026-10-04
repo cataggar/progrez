@@ -144,10 +144,15 @@ zig build -j2 -Dtarget=aarch64-macos --prefix zig-out/aarch64-macos
 The C ABI tests cover manual rendering, automatic render-thread shutdown,
 buffer bounds, and C notification callbacks against both library variants.
 `nix flake check` runs these tests and the CLI suite on Linux and macOS.
+Linux Nix tests invoke libc's runtime loader directly, since the sandbox has no
+FHS interpreter path; neither installed artifacts nor build caches are patched.
+With Nix installed, `./test` runs the flake checks; otherwise it accepts Zig build
+options such as `-Doptimize=debug`.
 
 Nix release builds pin Zig code generation to an explicit target ABI and the
-portable CPU baseline rather than the build host's native instruction set. Release static archives also omit
-DWARF build paths. On x86-64 Linux, `nix flake check` disassembles the complete
+portable CPU baseline rather than the build host's native instruction set.
+Release static archives also omit DWARF build paths. On x86-64 Linux,
+`nix flake check` disassembles the complete
 package instruction set and rejects host-specific ISA or embedded `/build/`
 paths, keeping cache artifacts reproducible across CI machines.
 
