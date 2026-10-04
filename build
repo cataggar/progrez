@@ -11,13 +11,13 @@ run() {
   }
 }
 
-optimize="ReleaseFast"
+optimize="fast"
 if [[ "${1:-}" == "debug" ]]; then
-  optimize="Debug"
+  optimize="debug"
   shift
 fi
 
-if [[ "$optimize" != "ReleaseFast" ]]; then
+if [[ "$optimize" != "fast" ]]; then
   # Non-release builds use zig directly (local dev, no need for Nix reproducibility)
   run zig build "-Doptimize=$optimize" "$@"
 elif command -v nix >/dev/null 2>&1; then

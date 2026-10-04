@@ -102,8 +102,11 @@ C demo program. Exercises indeterminate scan phase then determinate processing p
 ## tests/cli/test_cli.sh
 CLI integration tests (Bash). 3 tests: demo runs without crash, PROGRESS=false suppresses output, completion summary present.
 
+## tests/ffi/test_ffi.c
+C ABI integration tests linked against both static and shared libraries. Covers manual rendering, buffer bounds, render-thread shutdown, and C notification callbacks.
+
 ## build.zig
-Build system. Static library (`libprogrez`), dynamic library (`libprogrez.dylib`/`.so`), C demo executable (`progrez-demo`), unit test step. Default optimize: ReleaseFast. Installs C header to `include/`. Exposes Zig module for downstream consumers.
+Zig 0.17 build system. Static library (`libprogrez`), dynamic library (`libprogrez_shared.dylib`/`.so`), C demo executable (`progrez-demo`), unit and C ABI test step. Default optimize: `fast`. Installs C header to `include/`. Exposes Zig modules for downstream consumers. `test-compile` installs all test binaries and the demo without executing them.
 
 ## flake.nix
-Nix flake. Provides `packages.default` (the library), `checks.test` (unit tests for Garnix CI), and `devShells.default` (zig + hyperfine).
+Nix flake. Pins Zig 0.17.0 and provides `packages.default` (the libraries and demo), `checks.test` (safety-enabled unit, C ABI, and CLI tests), and `devShells.default` (zig + hyperfine). Retains the baseline-CPU package reproducibility check on x86-64 Linux.

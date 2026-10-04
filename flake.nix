@@ -14,7 +14,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        zig = zig-overlay.packages.${system}."0.16.0";
+        zig = zig-overlay.packages.${system}."0.17.0";
         zigCpu = "baseline";
 
         progrez = pkgs.stdenv.mkDerivation {
@@ -28,7 +28,7 @@
           buildPhase = ''
             export HOME="$TMPDIR"
             export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-            zig build --prefix $out -Dcpu=${zigCpu} -Doptimize=ReleaseFast
+            zig build -j2 --prefix $out -Dcpu=${zigCpu} -Doptimize=fast
           '';
 
           dontInstall = true;
@@ -49,20 +49,20 @@
             buildPhase = ''
               export HOME="$TMPDIR"
               export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
+              zig build -j2 test-compile -Dcpu=${zigCpu} -Doptimize=debug
               # Zig with link_libc bakes /lib64/ld-linux-x86-64.so.2 as the
               # dynamic linker, which does not exist in the Nix build sandbox.
-              # Compile the test binary first, patchelf it, then run the test.
+              # Patch only installed executables, leaving build caches intact.
               ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-              zig build test-compile -Dcpu=${zigCpu}
               DL="$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"
-              for d in .zig-cache zig-out; do
-                [ -d "$d" ] || continue
-                for f in $(find "$d" -type f -perm -u+x); do
-                  patchelf --set-interpreter "$DL" "$f" 2>/dev/null || true
-                done
+              for f in zig-out/bin/* zig-out/test-bins/*; do
+                patchelf --set-interpreter "$DL" "$f"
               done
               ''}
-              zig build test -Dcpu=${zigCpu}
+              zig-out/test-bins/unit_test
+              zig-out/test-bins/ffi-static
+              zig-out/test-bins/ffi-shared
+              bash tests/cli/test_cli.sh
             '';
 
             installPhase = ''

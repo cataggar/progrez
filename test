@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 
+set -uo pipefail
+
 FAILURES=0
 
-echo "=== Unit tests (Zig) ==="
-if nix develop -c zig build test; then
-	echo "PASS: unit tests"
+zig_command=(zig)
+if command -v nix >/dev/null 2>&1; then
+	zig_command=(nix develop -c zig)
+fi
+
+echo "=== Unit and C ABI tests ==="
+if "${zig_command[@]}" build -j2 test "$@"; then
+	echo "PASS: unit and C ABI tests"
 else
-	echo "FAIL: unit tests"
+	echo "FAIL: unit and C ABI tests"
 	((FAILURES++))
 fi
 
 echo ""
 echo "=== Building demo for CLI tests ==="
-if nix develop -c zig build 2>&1; then
+if "${zig_command[@]}" build -j2 "$@" 2>&1; then
 	echo "PASS: build"
 else
 	echo "FAIL: build"
